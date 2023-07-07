@@ -1,0 +1,9 @@
+.DS_Store
+__pycache__/
+.ipynb_checkpoints
+data
+road
+data-test
+result
+model
+trainer_result.txt

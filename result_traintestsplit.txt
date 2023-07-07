@@ -1,0 +1,14 @@
+Tensorflow version 2.13.0-rc1
+{'data_path': './data/Processed', 'window_size': 100, 'strided': 100, 'rid': 2}
+Writing to:  ./data/Processed/TFrecord_w100_s100/2/train
+Writing to:  ./data/Processed/TFrecord_w100_s100/2/val
+Read from ./data/Processed/TFRecord_w100_s100/DoS: 11064 records
+Read from ./data/Processed/TFRecord_w100_s100/Normal_DoS: 25593 records
+Read from ./data/Processed/TFRecord_w100_s100/Fuzzy: 13117 records
+Read from ./data/Processed/TFRecord_w100_s100/Normal_Fuzzy: 25271 records
+Read from ./data/Processed/TFRecord_w100_s100/gear: 19140 records
+Read from ./data/Processed/TFRecord_w100_s100/Normal_gear: 25291 records
+Read from ./data/Processed/TFRecord_w100_s100/RPM: 20922 records
+Read from ./data/Processed/TFRecord_w100_s100/Normal_RPM: 25295 records
+Total training:  115981
+Total validation:  49712
