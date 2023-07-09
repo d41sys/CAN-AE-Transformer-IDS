@@ -78,7 +78,7 @@ class Config:
         self.num_layers = 4
         self.gran = 1e-6
         self.log_e = 2
-        self.device = torch.device('mps' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
         self.classes_num = 5
         self.batch_size = 10
         self.epoch_num = 5
@@ -169,9 +169,10 @@ dataset_path  = '../data/car-hacking/'
 attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM', 'Test']
 attack = attack_types[4]
 file_name = '{}{}_dataset.csv'.format(dataset_path, attack)
-print(file_name)
+# print(file_name)
 
 config = Config()
+print(config.device)
 
 fin = open(config.result_file, 'a')
 fin.write('-------------------------------------\n')
@@ -224,7 +225,7 @@ for epoch in range(start_epoch + 1, config.epoch_num):
         batch_mask = sample_batch['mask'].to(config.device)
         batch_label = sample_batch['label'].to(config.device)
         batch_time_position = sample_batch['time'].to(config.device)
-        print("BATCH HEADER: ", len(batch_header[0]), " \nBATCH PAYLOAD: ", batch_sl_sum[0][0]," \nBATCH MASK: ", len(batch_mask)," \nBATCH LABEL: ", batch_label," \nBATCH TIME POSITION: ", batch_time_position[0])
+        # print("BATCH HEADER: ", len(batch_header[0]), " \nBATCH PAYLOAD: ", batch_sl_sum[0][0]," \nBATCH MASK: ", len(batch_mask)," \nBATCH LABEL: ", batch_label," \nBATCH TIME POSITION: ", batch_time_position[0])
         out = model(batch_header, batch_sl_sum, batch_mask, batch_time_position)
         loss = loss_func(out, batch_label)
         opt.zero_grad()

@@ -40,7 +40,7 @@ class DatasetPreprocess(Dataset):
     
     def __getitem__(self, idx):
         filenames = '{}/{}.tfrec'.format(self.root_dir, idx)
-        print("File name: ", filenames)
+        # print("File name: ", filenames)
         
         if not os.path.isfile(filenames):
             print(filenames + 'does not exist!')
@@ -84,7 +84,7 @@ class DatasetPreprocess(Dataset):
 
         ori_seq_len = header.shape[0]
         pad_len = 100 - ori_seq_len
-        print(pad_len)
+        # print(pad_len)
         ## PAD WITH MAX SIZE = 100
         header = F.pad(header.T, (0, pad_len)).T.numpy()
         payload = F.pad(payload.T, (0, pad_len)).T.numpy()
@@ -107,13 +107,13 @@ class DatasetPreprocess(Dataset):
         # label = false_data['Flag']
         sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'label': label, 'idx': idx}
         
-        print("HEADER FEATURE: ", header, " AND LENGTH: ", len(header))
-        print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload[0]))
-        print("MASK FEATURE: ", mask, " AND LENGTH: ", len(mask))
-        print("TIME FEATURE: ", time_feature)
-        print("LABEL: ", label)
-        print("INDEX: ", idx)
-        print("DONE")
+        # print("HEADER FEATURE: ", header, " AND LENGTH: ", len(header))
+        # print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload[0]))
+        # print("MASK FEATURE: ", mask, " AND LENGTH: ", len(mask))
+        # print("TIME FEATURE: ", time_feature)
+        # print("LABEL: ", label)
+        # print("INDEX: ", idx)
+        # print("DONE")
         
         if self.transform:
             sample = self.transform(sample)
