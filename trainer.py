@@ -78,18 +78,18 @@ class Config:
         self.num_layers = 4
         self.gran = 1e-6
         self.log_e = 2
-        self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.classes_num = 5
         self.batch_size = 10
         self.epoch_num = 5
-        self.lr = 0.001
-        self.train_pro = 0.8  # 训练集比例 Ratio of training set
+        self.lr = 0.0001
+        self.train_pro = 0.7  # 训练集比例 Ratio of training set
 
         self.root_dir = './data/Processed/TFRecord_w100_s100/2/'
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/Users/d41sy/Desktop/sch/coding/ml-ids/result/trans8_performance.txt'
+        self.result_file = '/home/tiendat/transformer-entropy-ids/result/trans8_performance.txt'
 
         self.isload_model = False  # 是否加载模型继续训练 Whether to load the model and continue training
         self.start_epoch = 24  # 加载的模型的epoch The epoch of the loaded model

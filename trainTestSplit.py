@@ -72,7 +72,7 @@ def train_test_split(**args):
     if args['strided'] == None:
         args['strided'] = args['window_size']
         
-    data_dir = f"{args['data_path']}/TFrecord_w{args['window_size']}_s{args['strided']}"
+    data_dir = f"{args['data_path']}/TFRecord_w{args['window_size']}_s{args['strided']}"
         
     out_dir = data_dir + '/{}'.format(args['rid'])
     train_dir = os.path.join(out_dir, 'train')

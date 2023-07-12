@@ -139,7 +139,7 @@ def main(indir, outdir, attacks, window_size, strided):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="./data/Car-Hacking")
+    parser.add_argument('--indir', type=str, default="./data/car-hacking")
     parser.add_argument('--outdir', type=str, default="./data/Processed/TFRecord")
     parser.add_argument('--window_size', type=int, default=None)
     parser.add_argument('--strided', type=int, default=None)
