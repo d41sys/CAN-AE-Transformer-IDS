@@ -83,7 +83,7 @@ class DatasetPreprocess(Dataset):
         # # print("PAYLOAD BEFORE: ",payload)
 
         ori_seq_len = header.shape[0]
-        pad_len = 100 - ori_seq_len
+        pad_len = self.window_size - ori_seq_len
         # print(pad_len)
         ## PAD WITH MAX SIZE = 100
         header = F.pad(header.T, (0, pad_len)).T.numpy()
@@ -108,7 +108,7 @@ class DatasetPreprocess(Dataset):
         sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'label': label, 'idx': idx}
         
         # print("HEADER FEATURE: ", header, " AND LENGTH: ", len(header))
-        # print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload[0]))
+        # print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload))
         # print("MASK FEATURE: ", mask, " AND LENGTH: ", len(mask))
         # print("TIME FEATURE: ", time_feature)
         # print("LABEL: ", label)

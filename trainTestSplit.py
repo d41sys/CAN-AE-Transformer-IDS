@@ -8,7 +8,7 @@ from tqdm import tqdm
 import os
 print('Tensorflow version', tf.__version__)
 
-class TFwriter:
+class TFwriter: 
     def __init__(self, outdir, start_idx = 0):
         print('Writing to: ', outdir)
         self._outdir = outdir
@@ -85,7 +85,7 @@ def train_test_split(**args):
     train_writer = TFwriter(train_dir)
     val_writer = TFwriter(val_dir)
     
-    train_ratio = 0.7
+    train_ratio = 0.7 # TRAIN 80 / TEST 20
     batch_size = 1000
 
     total_train_size = 0

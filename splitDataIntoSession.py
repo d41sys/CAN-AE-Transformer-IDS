@@ -61,7 +61,7 @@ def write_tfrecord(data, filename):
         tfrecord_writer.write(serialize_example(X, Y))
     tfrecord_writer.close() 
 
-def split_data(file_name, attack_id, window_size = 100, strided_size = 100):
+def split_data(file_name, attack_id, window_size, strided_size):
     if not os.path.exists(file_name):
         print(file_name, ' does not exist!')
         return None
@@ -94,10 +94,10 @@ def split_data(file_name, attack_id, window_size = 100, strided_size = 100):
     data = as_strided(df.Data, output_shape, (8*strided_size, 8)) #Stride is counted by bytes
     label = as_strided(df.Flag, output_shape, (1*strided_size, 1))
     
-    print("Data output", timestamp[0])
-    print("Data output", canid[0])
-    print("Data output", data[0])
-    print("Data output", label[0])
+    print("timestamp output", timestamp[0], " and length: ", len(timestamp[0]))
+    print("canid output", canid[0], " and length: ", len(canid[0]))
+    print("data output", data[0], " and length: ", len(data[0]))
+    print("label output", label[0], " and length: ", len(label[0]))
     
     df = pd.DataFrame({
         'timestamp': pd.Series(timestamp.tolist()), 
@@ -116,9 +116,10 @@ def split_data(file_name, attack_id, window_size = 100, strided_size = 100):
 
 def main(indir, outdir, attacks, window_size, strided):
     print(outdir)
+    print("=========================================================================================================")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
-    data_info = {}
+    data_info = {} 
     for attack_id, attack in enumerate(attacks):
         print('Attack: {} ==============='.format(attack))
         finput = '{}/{}_dataset.csv'.format(indir, attack)

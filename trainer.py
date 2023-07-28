@@ -69,27 +69,28 @@ class Config:
         self.model_name = 'Transformer'
         self.slide_window = 1
         self.slsum_count = 8 #int(math.pow(16, self.slide_window))  # 滑动窗口计数的特征的长度 n-gram?
-        self.dnn_out_d = 8 # 经过DNN后的滑动窗口计数特征的维度 Dimensions of sliding window count features after DNN
-        self.head_dnn_out_d = 32
-        self.d_model = self.dnn_out_d + self.head_dnn_out_d  # transformer的输入的特征的维度, dnn_out_d + 包头长度 The dimension of the input feature of the transformer, dnn_out_d + header length
-        self.pad_size = 100
+        self.dnn_out_d = 8 # 经过DNN后的滑动窗口计数特征的维度 Dimensions of sliding window count features after DNN 8
+        self.head_dnn_out_d = 32 
+        self.d_model = self.dnn_out_d + self.head_dnn_out_d # transformer的输入的特征的维度, dnn_out_d + 包头长度 The dimension of the input feature of the transformer, dnn_out_d + header length
+        self.pad_size = 29
+        self.window_size = 29
         self.max_time_position = 10000
-        self.nhead = 5
-        self.num_layers = 4
+        self.nhead = 5 # ori: 5
+        self.num_layers = 5
         self.gran = 1e-6
         self.log_e = 2
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.classes_num = 5
+        self.classes_num = 5 
         self.batch_size = 10
-        self.epoch_num = 5
-        self.lr = 0.0001
+        self.epoch_num = 20
+        self.lr = 0.0001 #0.00001 learning rate 
         self.train_pro = 0.7  # 训练集比例 Ratio of training set
 
-        self.root_dir = './data/Processed/TFRecord_w100_s100/2/'
+        self.root_dir = './data/Processed/TFRecord_w29_s29/1/'
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/home/tiendat/transformer-entropy-ids/result/trans8_performance.txt'
+        self.result_file = '/mnt/hdd2/transformer-entropy-ids/result/trans8_performance.txt'
 
         self.isload_model = False  # 是否加载模型继续训练 Whether to load the model and continue training
         self.start_epoch = 24  # 加载的模型的epoch The epoch of the loaded model
@@ -124,27 +125,25 @@ class Time_Positional_Encoding(nn.Module):
 class MyTrans(nn.Module):
     def __init__(self, config):
         super(MyTrans, self).__init__()
-        self.dnn = DNN(config.slsum_count, config.dnn_out_d)
-        self.head_dnn = DNN(4, config.head_dnn_out_d)
-        self.position_embedding = Time_Positional_Encoding(config.d_model, config.max_time_position, config.device).to(
-            config.device)
+        self.dnn = DNN(config.slsum_count, config.dnn_out_d).to(config.device)
+        self.head_dnn = DNN(4, config.head_dnn_out_d).to(config.device)
+        self.position_embedding = Time_Positional_Encoding(config.d_model, config.max_time_position, config.device).to(config.device)
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=config.d_model, nhead=config.nhead).to(config.device)
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=config.num_layers).to(
-            config.device)
+        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=config.num_layers).to(config.device)
         self.fc = nn.Linear(config.d_model, config.classes_num).to(config.device)
         self.pad_size = config.pad_size
         self.dnn_out_d = config.dnn_out_d
         self.head_dnn_out_d = config.head_dnn_out_d
 
     def forward(self, header, sl_sum, mask, time_position):
-        dnn_out = torch.empty((sl_sum.shape[0], self.dnn_out_d, 0))
+        dnn_out = torch.empty((sl_sum.shape[0], self.dnn_out_d, 0)).to(config.device)
 
         for i in range(self.pad_size):
             tmp = self.dnn(sl_sum[:, i, :]).unsqueeze(2)
             dnn_out = torch.concat((dnn_out, tmp), dim=2)
         dnn_out = dnn_out.permute(0, 2, 1)
 
-        head_dnn_out = torch.empty((header.shape[0], self.head_dnn_out_d, 0))
+        head_dnn_out = torch.empty((header.shape[0], self.head_dnn_out_d, 0)).to(config.device)
         for i in range(self.pad_size):
             tmp = self.head_dnn(header[:, i, :]).unsqueeze(2)
             head_dnn_out = torch.concat((head_dnn_out, tmp), dim=2)
@@ -158,18 +157,6 @@ class MyTrans(nn.Module):
         out = torch.sum(out, 1)
         out = self.fc(out)
         return out
-
-
-# Read by dask first
-attributes = ['Timestamp', 'canID', 'DLC',
-                           'Data0', 'Data1', 'Data2',
-                           'Data3', 'Data4', 'Data5',
-                           'Data6', 'Data7', 'Flag']
-dataset_path  = '../data/car-hacking/'
-attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM', 'Test']
-attack = attack_types[4]
-file_name = '{}{}_dataset.csv'.format(dataset_path, attack)
-# print(file_name)
 
 config = Config()
 print(config.device)
@@ -190,10 +177,11 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-train_dataset = DatasetPreprocess(config.root_dir, 100, config.pad_size, config.d_model, config.max_time_position, config.gran, config.log_e, is_train=True)
-test_dataset = DatasetPreprocess(config.root_dir, 100, config.pad_size, config.d_model, config.max_time_position, config.gran, config.log_e, is_train=False)
+train_dataset = DatasetPreprocess(config.root_dir, config.window_size, config.pad_size, config.d_model, config.max_time_position, config.gran, config.log_e, is_train=True)
+test_dataset = DatasetPreprocess(config.root_dir, config.window_size, config.pad_size, config.d_model, config.max_time_position, config.gran, config.log_e, is_train=False)
 
 print("TRAIN SIZE:", len(train_dataset), " TEST SIZE:", len(test_dataset), " SIZE:", len(train_dataset)+len(test_dataset), " TRAIN RATIO:", round(len(train_dataset)/(len(train_dataset)+len(test_dataset))*100), "%")
+# print("TRAIN DATA:", len(train_dataset[0]['header']))
 
 
 # 2 DataLoader? 
@@ -252,6 +240,7 @@ for epoch in range(start_epoch + 1, config.epoch_num):
             pre_y = np.concatenate([pre_y, pre], 0)
             label_y = np.concatenate([label_y, test_label.cpu().numpy()], 0)
         write_result(fin, label_y, pre_y, config.classes_num)
+        draw_confusion(label_y, pre_y, '')
     fin.close()
 
 fin = open(config.result_file, 'a')
