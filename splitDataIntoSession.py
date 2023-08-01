@@ -149,6 +149,8 @@ if __name__ == '__main__':
     
     if args.attack_type == 'all':
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
+    elif args.attack_type == 'road':
+        attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
     else:
         attack_types = [args.attack_type]
     
