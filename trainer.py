@@ -80,13 +80,13 @@ class Config:
         self.gran = 1e-6
         self.log_e = 2
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.classes_num = 5 
+        self.classes_num = 6 #5 for car-hacking 6 for road 
         self.batch_size = 10
-        self.epoch_num = 20
+        self.epoch_num = 30
         self.lr = 0.0001 #0.00001 learning rate 
         self.train_pro = 0.7  # 训练集比例 Ratio of training set
 
-        self.root_dir = './data/Processed/TFRecord_w29_s29/1/'
+        self.root_dir = './road/timesmooth/TFRecord_w29_s29/1/'
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)

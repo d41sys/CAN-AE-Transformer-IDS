@@ -125,6 +125,8 @@ def train_test_split(**args):
     
             
 if __name__ == '__main__':
+    #python3 trainTestSplit.py --data_path ./data/Processed --window_size 29 --strided 29 --rid 1
+    #python3 trainTestSplit.py --data_path ./road/preprocessed --window_size 29 --strided 29 --rid 1
     # Parse argument
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='../Data/')
