@@ -153,6 +153,17 @@ def main(indir, outdir, attacks, window_size, strided):
     
     if len(attacks) > 4:
         type_data = 'road'
+        
+        # process training data
+        normal_data = 'aggregated_training'
+        finput = '{}/{}_data.csv'.format(indir, normal_data)
+        df = split_data(finput, 0, window_size, strided, type_data)
+        print("Writing Normal...................")
+        foutput_normal = '{}/Normal_{}'.format(outdir, normal_data)
+        write_tfrecord(df, foutput_normal)
+        data_info[foutput_normal] = df.shape[0]
+        
+        # process attack data
         for attack_id, attack in enumerate(attacks):
             # Split to get number of dataset
             attack_name = attack.split(',')[0]
