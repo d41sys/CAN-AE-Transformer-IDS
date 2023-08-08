@@ -137,7 +137,8 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
     }, index= range(len(canid)))
     
     print('Label before use: ', df['label'])
-    df['label'] = df['label'].apply(lambda x: attack_id if any(x) else 0)
+    #df['label'] = df['label'].apply(lambda x: attack_id if any(x) else 0)
+    df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
     print('Label after use: ', df['label'])
     print("Aggregating data: Done")
     print('#Normal: ', df[df['label'] == 0].shape[0])
@@ -155,13 +156,13 @@ def main(indir, outdir, attacks, window_size, strided):
         type_data = 'road'
         
         # process training data
-        normal_data = 'aggregated_training'
-        finput = '{}/{}_data.csv'.format(indir, normal_data)
-        df = split_data(finput, 0, window_size, strided, type_data)
-        print("Writing Normal...................")
-        foutput_normal = '{}/Normal_{}'.format(outdir, normal_data)
-        write_tfrecord(df, foutput_normal)
-        data_info[foutput_normal] = df.shape[0]
+        # normal_data = 'aggregated_training'
+        # finput = '{}/{}_data.csv'.format(indir, normal_data)
+        # df = split_data(finput, 0, window_size, strided, type_data)
+        # print("Writing Normal...................")
+        # foutput_normal = '{}/Normal_{}'.format(outdir, normal_data)
+        # write_tfrecord(df, foutput_normal)
+        # data_info[foutput_normal] = df.shape[0]
         
         # process attack data
         for attack_id, attack in enumerate(attacks):

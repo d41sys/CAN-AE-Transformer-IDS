@@ -204,6 +204,24 @@ def add_time_diff_per_aid_col(df, order_by_time = False):
         df = df.sort_values('time').reset_index()
     return df
 
+def add_time_diff_per_aid_col_ver2(df, order_by_time = False):
+    """
+    Sorts df by aid and time and takes time diff between each successive col and puts in col "time_diffs"
+    Then removes first instance of each aids message
+    Returns sorted df with new column
+    """
+    df = df[['timestamp', 'header', 'payload', 'label']].reset_index().drop(['index'], axis=1)
+    df.sort_values(['header','timestamp'], inplace=True)
+    df['time_diffs'] = df['timestamp'].diff()
+    
+    print(f"After diff: {df}")
+    
+    mask = df.header == df.header.shift(1) #get bool mask of to filter out first msg of each group
+    df = df[mask]
+    if order_by_time:
+        df = df.sort_values('timestamp').reset_index()
+    return df
+
 
 def add_time_diff_per_PGN_col(df, order_by_time = False):
     """

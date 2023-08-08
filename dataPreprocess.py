@@ -5,6 +5,7 @@ from tfrecord.torch.dataset import TFRecordDataset
 import math
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+from copy import copy, deepcopy
 
 ID_LEN = 4 #CAN bus 2.0 has 29 bits
 DATA_LEN = 8 #Data field in Can message has 8 bytes
@@ -52,21 +53,26 @@ class DatasetPreprocess(Dataset):
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
         data = next(iter(dataloader))
         
+        # data['timestamp'] = data['timestamp'] - data['timestamp'].min()
+        
         timestamp, header, payload, label = data['timestamp'], data['header'], data['payload'], data['label']
         
-        # timestamp = timestamp.to(torch.float)
+        timestamp = timestamp.to(torch.float)
         # print("TIMESTAMP: ", timestamp, "AND LENGTH: ", len(timestamp[0]))
         # print("HEADER: ", (header), "AND LENGTH: ", len(header[0]))
         # print("PAYLOAD: ", type(payload), "AND LENGTH: ", len(payload[0]))
         # print("LABEL: ", type(label), "AND LENGTH: ", len(label[0]))
         
         # header[header == 0] = -1
+        
         timestamp = timestamp.numpy()[0]
         header = np.reshape(header.numpy(), (self.window_size, ID_LEN))
         payload = np.reshape(payload.numpy(), (self.window_size, DATA_LEN))
         label = label.numpy()[0][0]
+        ori_timestamp = copy(timestamp)
         
-        # print("TIMESTAMP AFTER: ", (timestamp), "AND LENGTH: ", len(timestamp))
+        
+        # print("TIMESTAMP AFTER: ", (ori_timestamp), "AND LENGTH: ", len(ori_timestamp))
         # print("HEADER AFTER: ", header, "AND LENGTH: ", type(header))
         # print("PAYLOAD AFTER: ", (payload), "AND LENGTH: ", len(payload))
         # print("LABEL AFTER: ", (label))
@@ -95,6 +101,7 @@ class DatasetPreprocess(Dataset):
             mask = np.concatenate((np.array([False] * ori_seq_len), np.array([True] * pad_len)))
         
         ## GET TIMESTAMP
+        
         len_timestamp = len(timestamp)
 
         for i in range(len_timestamp):
@@ -105,7 +112,9 @@ class DatasetPreprocess(Dataset):
 
         time_feature = self.get_time(torch.IntTensor(timestamp))
         # label = false_data['Flag']
-        sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'label': label, 'idx': idx}
+        
+        # print(f"ORIGIN TIMESTAMP: {ori_timestamp} AND LENGTH: {len(ori_timestamp)} AND TYPE: {type(ori_timestamp)}")
+        sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'oritime' : ori_timestamp, 'label': label, 'idx': idx}
         
         # print("HEADER FEATURE: ", header, " AND LENGTH: ", len(header))
         # print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload))
@@ -114,6 +123,7 @@ class DatasetPreprocess(Dataset):
         # print("LABEL: ", label)
         # print("INDEX: ", idx)
         # print("DONE")
+        # print(f"SAMPLE: {sample['oritime']}")
         
         if self.transform:
             sample = self.transform(sample)

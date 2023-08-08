@@ -85,7 +85,7 @@ def train_test_split(**args):
     train_writer = TFwriter(train_dir)
     val_writer = TFwriter(val_dir)
     
-    train_ratio = 0.7 # TRAIN 80 / TEST 20
+    train_ratio = 0.8 # TRAIN 80 / TEST 20
     batch_size = 1000
 
     total_train_size = 0
