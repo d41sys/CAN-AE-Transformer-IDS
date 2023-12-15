@@ -11,7 +11,7 @@ ID_LEN = 4 #CAN bus 2.0 has 29 bits
 DATA_LEN = 8 #Data field in Can message has 8 bytes
 
 class DatasetPreprocess(Dataset):
-    def __init__(self, root_dir, window_size, pad_size, embed, max_time_position, gran, log_e, transform=None, is_train=True):
+    def __init__(self, root_dir, sequence_size, pad_size, embed, max_time_position, gran, log_e, transform=None, is_train=True):
         if is_train:
             self.root_dir = os.path.join(root_dir, 'train')
         else:
@@ -22,7 +22,7 @@ class DatasetPreprocess(Dataset):
         self.max_time_position = max_time_position
         self.gran = gran
         self.log_e = log_e
-        self.window_size = window_size
+        self.sequence_size = sequence_size
         self.total_size = len(os.listdir(self.root_dir))
 
         self.pe = torch.tensor(
@@ -41,35 +41,28 @@ class DatasetPreprocess(Dataset):
     
     def __getitem__(self, idx):
         filenames = '{}/{}.tfrec'.format(self.root_dir, idx)
-        # print("File name: ", filenames)
         
         if not os.path.isfile(filenames):
             print(filenames + 'does not exist!')
             
         index_path = None
-        description = {'timestamp' : 'float','header': 'int', 'payload': 'int','label': 'int'}
+        description = {'timestamp' : 'float', 'header': 'int', 'payload': 'int','label': 'int'}
         
         dataset = TFRecordDataset(filenames, index_path, description)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
         data = next(iter(dataloader))
-        
-        # data['timestamp'] = data['timestamp'] - data['timestamp'].min()
-        
         timestamp, header, payload, label = data['timestamp'], data['header'], data['payload'], data['label']
         
-        timestamp = timestamp.to(torch.float)
+        # timestamp = timestamp.to(torch.float)
         # print("TIMESTAMP: ", timestamp, "AND LENGTH: ", len(timestamp[0]))
         # print("HEADER: ", (header), "AND LENGTH: ", len(header[0]))
         # print("PAYLOAD: ", type(payload), "AND LENGTH: ", len(payload[0]))
         # print("LABEL: ", type(label), "AND LENGTH: ", len(label[0]))
         
-        # header[header == 0] = -1
-        
         timestamp = timestamp.numpy()[0]
-        header = np.reshape(header.numpy(), (self.window_size, ID_LEN))
-        payload = np.reshape(payload.numpy(), (self.window_size, DATA_LEN))
+        header = np.reshape(header.numpy(), (self.sequence_size, ID_LEN))
+        payload = np.reshape(payload.numpy(), (self.sequence_size, DATA_LEN))
         label = label.numpy()[0][0]
-        ori_timestamp = copy(timestamp)
         
         
         # print("TIMESTAMP AFTER: ", (ori_timestamp), "AND LENGTH: ", len(ori_timestamp))
@@ -89,7 +82,7 @@ class DatasetPreprocess(Dataset):
         # # print("PAYLOAD BEFORE: ",payload)
 
         ori_seq_len = header.shape[0]
-        pad_len = self.window_size - ori_seq_len
+        pad_len = self.sequence_size - ori_seq_len
         # print(pad_len)
         ## PAD WITH MAX SIZE = 100
         header = F.pad(header.T, (0, pad_len)).T.numpy()
@@ -114,7 +107,7 @@ class DatasetPreprocess(Dataset):
         # label = false_data['Flag']
         
         # print(f"ORIGIN TIMESTAMP: {ori_timestamp} AND LENGTH: {len(ori_timestamp)} AND TYPE: {type(ori_timestamp)}")
-        sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'oritime' : ori_timestamp, 'label': label, 'idx': idx}
+        sample = {'header': header, 'payload': payload, 'mask': mask, 'time': time_feature, 'label': label, 'idx': idx}
         
         # print("HEADER FEATURE: ", header, " AND LENGTH: ", len(header))
         # print("PAYLOAD FEATURE: ", payload, " AND LENGTH: ", len(payload))

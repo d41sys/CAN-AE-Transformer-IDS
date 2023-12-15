@@ -15,6 +15,8 @@ from tqdm import tqdm
 import swifter
 import argparse
 import os
+import helper_functions
+from copy import copy, deepcopy
 
 attributes = ['Timestamp', 'canID', 'DLC', 
                            'Data0', 'Data1', 'Data2', 
@@ -56,14 +58,16 @@ def split_into_list(string, type):
 def serialize_example(x, y): 
     """converts x, y to tf.train.Example and serialize"""
     #Need to pay attention to whether it needs to be converted to numpy() form
-    timestamp, canid, payload = x
+    timestamp, timediff, canid, payload = x
     timestamp = tf.train.FloatList(value = np.array(timestamp).flatten())
+    timediff = tf.train.FloatList(value = np.array(timediff).flatten())
     canid = tf.train.Int64List(value = np.array(canid).flatten())
     payload = tf.train.Int64List(value = np.array(payload).flatten())
     label = tf.train.Int64List(value = np.array([y]))
     features = tf.train.Features(
         feature = {
             "timestamp": tf.train.Feature(float_list = timestamp),
+            "timediff": tf.train.Feature(float_list = timediff),
             "header": tf.train.Feature(int64_list = canid),
             "payload": tf.train.Feature(int64_list = payload),
             "label" : tf.train.Feature(int64_list = label)
@@ -75,7 +79,7 @@ def serialize_example(x, y):
 def write_tfrecord(data, filename):
     tfrecord_writer = tf.io.TFRecordWriter(filename)
     for _, row in tqdm(data.iterrows()):
-        X = (row['timestamp'], row['header'], row['payload'])
+        X = (row['timestamp'], row['timediff'], row['header'], row['payload'])
         Y = row['label']
         tfrecord_writer.write(serialize_example(X, Y))
     tfrecord_writer.close() 
@@ -111,23 +115,28 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
         print("Reading {}: done".format(file_name))
         df = df.sort_values('Timesmooth', ascending=True)
         df['Data'] = df['Data'].apply(lambda x: split_into_list(x, 'payload'))
+        # # This dataframe is used for anomaly threshold
+        # df_anomaly = copy(df[df['Flag'] == False])
+        print("Copy anomaly: DONE")
         df['canID'] = df['canID'].apply(lambda x: split_into_list(x, 'cid'))
-        #print(df['canID'])
-        
-        print("ROAD pre-processing: Done")
+        # print(df['TimeDiffs'])
+        print("ROAD pre-processing: Done") 
     # print("BYTEs: ", df['Flag'][0].nbytes)
+    
     
     as_strided = np.lib.stride_tricks.as_strided
     output_shape = ((len(df) - window_size) // strided_size + 1, window_size)
-    timestamp = as_strided(df.Timesmooth, output_shape, (8*strided_size, 8))
+    timestamp = as_strided(df.Timestamp, output_shape, (8*strided_size, 8))
+    # timediff = as_strided(df.TimeDiffs, output_shape, (8*strided_size, 8))
     canid = as_strided(df.canID, output_shape, (8*strided_size, 8))
     data = as_strided(df.Data, output_shape, (8*strided_size, 8)) #Stride is counted by bytes
     label = as_strided(df.Flag, output_shape, (1*strided_size, 1))
     
-    print("timestamp output", timestamp[0], " and length: ", len(timestamp[0]))
-    print("canid output", canid[0], " and length: ", len(canid[0]))
-    print("data output", data[0], " and length: ", len(data[0]))
-    print("label output", label[0], " and length: ", len(label[0]))
+    # print("timestamp output", timestamp[0], " and length: ", len(timestamp[0]))
+    # print("timediff output", timediff[0], " and length: ", len(timediff[0]))
+    # print("canid output", canid[0], " and length: ", len(canid[0]))
+    # print("data output", data[0], " and length: ", len(data[0]))
+    # print("label output", label[0], " and length: ", len(label[0]))
     
     df = pd.DataFrame({
         'timestamp': pd.Series(timestamp.tolist()), 
@@ -136,16 +145,16 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
         'label': pd.Series(label.tolist())
     }, index= range(len(canid)))
     
-    print('Label before use: ', df['label'])
-    #df['label'] = df['label'].apply(lambda x: attack_id if any(x) else 0)
-    df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
-    print('Label after use: ', df['label'])
+    # print('Label before use: ', df['label'])
+    df['label'] = df['label'].apply(lambda x: attack_id if any(x) else 0)
+    # df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
+    # print('Label after use: ', df['label'])
     print("Aggregating data: Done")
     print('#Normal: ', df[df['label'] == 0].shape[0])
     print('#Attack: ', df[df['label'] != 0].shape[0])
     return df[['timestamp', 'header', 'payload', 'label']].reset_index().drop(['index'], axis=1)
 
-def main(indir, outdir, attacks, window_size, strided):
+def main(indir, outdir, attacks, window_size, strided, attack_types):
     print(outdir)
     print("=========================================================================================================")
     if not os.path.exists(outdir):
@@ -154,11 +163,11 @@ def main(indir, outdir, attacks, window_size, strided):
     
     if len(attacks) > 4:
         type_data = 'road'
-        
         # process training data
         # normal_data = 'aggregated_training'
         # finput = '{}/{}_data.csv'.format(indir, normal_data)
-        # df = split_data(finput, 0, window_size, strided, type_data)
+        # df, df_anomaly = split_data(finput, 0, window_size, strided, type_data)
+        # df_aggregation.append(df_anomaly)
         # print("Writing Normal...................")
         # foutput_normal = '{}/Normal_{}'.format(outdir, normal_data)
         # write_tfrecord(df, foutput_normal)
@@ -172,8 +181,22 @@ def main(indir, outdir, attacks, window_size, strided):
             print('Attack: {} ==============='.format(attack_name))
             
             if int(attack_ver) == 1:
-                finput = '{}/{}_dataset.csv'.format(indir, attack_name)
-                df = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                if attack_types == 'road':
+                    finput = '{}/{}_dataset.csv'.format(indir, attack_name)
+                    df = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                elif attack_types == 'road_masquerade':
+                    finput = '{}/{}_masquerade_dataset.csv'.format(indir, attack_name)
+                    df = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                else:
+                    df = []
+                    finput = '{}/{}_dataset.csv'.format(indir, attack_name)
+                    df_1 = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                    df.append(df_1)
+                    finput = '{}/{}_masquerade_dataset.csv'.format(indir, attack_name)
+                    df_2 = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                    df.append(df_2)
+                    df = pd.concat(df)
+                    
                 print("Writing...................")
                 foutput_attack = '{}/{}'.format(outdir, attack_name)
                 foutput_normal = '{}/Normal_{}'.format(outdir, attack_name)
@@ -181,41 +204,37 @@ def main(indir, outdir, attacks, window_size, strided):
                 df_normal = df[df['label'] == 0]
                 write_tfrecord(df_attack, foutput_attack)
                 write_tfrecord(df_normal, foutput_normal)
-                
                 data_info[foutput_attack] = df_attack.shape[0]
                 data_info[foutput_normal] = df_normal.shape[0]
             else:
-                if attack_name == 'reverse_light':
-                    attack_reverse_mode = ['on_attack', 'off_attack']
-                    for mode in attack_reverse_mode:
-                        for index in range(int(attack_ver)):
-                            finput = '{}/{}_{}_{}_dataset.csv'.format(indir, attack_name, mode, index+1)
-                            df = split_data(finput, attack_id + 1, window_size, strided, type_data)
-                            print("Writing...................")
-                            foutput_attack = '{}/{}_{}'.format(outdir, attack_name, index+1)
-                            foutput_normal = '{}/Normal_{}_{}'.format(outdir, attack_name, index+1)
-                            df_attack = df[df['label'] != 0]
-                            df_normal = df[df['label'] == 0]
-                            write_tfrecord(df_attack, foutput_attack)
-                            write_tfrecord(df_normal, foutput_normal)
-                            
-                            data_info[foutput_attack] = df_attack.shape[0]
-                            data_info[foutput_normal] = df_normal.shape[0]
-                else:
-                    for index in range(int(attack_ver)):
+                for index in range(int(attack_ver)):
+                    if attack_types == 'road':
                         finput = '{}/{}_{}_dataset.csv'.format(indir, attack_name, index+1)
                         df = split_data(finput, attack_id + 1, window_size, strided, type_data)
-                        print("Writing...................")
-                        foutput_attack = '{}/{}_{}'.format(outdir, attack_name, index+1)
-                        foutput_normal = '{}/Normal_{}_{}'.format(outdir, attack_name, index+1)
-                        df_attack = df[df['label'] != 0]
-                        df_normal = df[df['label'] == 0]
-                        write_tfrecord(df_attack, foutput_attack)
-                        write_tfrecord(df_normal, foutput_normal)
+                    elif attack_types == 'road_masquerade':
+                        finput = '{}/{}_{}_masquerade_dataset.csv'.format(indir, attack_name, index+1)
+                        df = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                    else:
+                        df = []
+                        finput = '{}/{}_{}_dataset.csv'.format(indir, attack_name, index+1)
+                        df_1 = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                        df.append(df_1)
+                        finput = '{}/{}_{}_masquerade_dataset.csv'.format(indir, attack_name, index+1)
+                        df_2 = split_data(finput, attack_id + 1, window_size, strided, type_data)
+                        df.append(df_2)
+                        df = pd.concat(df) 
                         
-                        data_info[foutput_attack] = df_attack.shape[0]
-                        data_info[foutput_normal] = df_normal.shape[0]
-    else: 
+                    print("Writing...................")
+                    foutput_attack = '{}/{}_{}'.format(outdir, attack_name, index+1)
+                    foutput_normal = '{}/Normal_{}_{}'.format(outdir, attack_name, index+1)
+                    df_attack = df[df['label'] != 0]
+                    df_normal = df[df['label'] == 0]
+                    write_tfrecord(df_attack, foutput_attack)
+                    write_tfrecord(df_normal, foutput_normal)
+                    
+                    data_info[foutput_attack] = df_attack.shape[0]
+                    data_info[foutput_normal] = df_normal.shape[0]
+    elif len(attacks) == 4: 
         type_data = 'car-hacking'
         for attack_id, attack in enumerate(attacks):
             print('Attack: {} ==============='.format(attack))
@@ -231,8 +250,10 @@ def main(indir, outdir, attacks, window_size, strided):
             
             data_info[foutput_attack] = df_attack.shape[0]
             data_info[foutput_normal] = df_normal.shape[0]
-        
+    print("Write record DONE!!!")
     json.dump(data_info, open('{}/datainfo.txt'.format(outdir), 'w'))
+    # can_dict = calc_anomaly_threshhold(df_anomaly)
+    # json.dump(can_dict, open('{}/candict.txt'.format(outdir), 'w'))
     print("DONE!")
 
 if __name__ == '__main__':
@@ -244,12 +265,18 @@ if __name__ == '__main__':
     parser.add_argument('--attack_type', type=str, default="all", nargs='+')
     args = parser.parse_args()
     
-    if args.attack_type == 'all':
+    if args.attack_type == 'car-hacking':
         #python3 splitDataIntoSession.py --window_size=29 --strided=29 >> splitdata.txt
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
+        print("Car hacking")
     elif args.attack_type[0] == 'road':
         #python3 splitDataIntoSession.py --window_size=29 --strided=29 --attack_type=road --indir=./road/processed --outdir=./road/preprocessed/TFRecord > split_road.txt
-        attack_types = ['max_engine_coolant_temp_attack,1', 'fuzzing_attack,3', 'max_speedometer_attack,3', 'reverse_light,3', 'correlated_signal_attack,3']
+        attack_types = ['max_engine_coolant_temp_attack,1', 'fuzzing_attack,3', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']
+    elif args.attack_type[0] == 'road_masquerade':
+        #python3 splitDataIntoSession.py --window_size=29 --strided=29 --attack_type=road --indir=./road/processed --outdir=./road/preprocessed/TFRecord > split_road.txt
+        attack_types = ['max_engine_coolant_temp_attack,1', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']
+    elif args.attack_type[0] == 'all':
+        attack_types = ['max_engine_coolant_temp_attack,1', 'fuzzing_attack,3', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']
     else:
         attack_types = [args.attack_type]
     
@@ -257,4 +284,4 @@ if __name__ == '__main__':
         args.strided = args.window_size
         
     outdir =  args.outdir + '_w{}_s{}'.format(args.window_size, args.strided)
-    main(args.indir, outdir, attack_types, args.window_size, args.strided)
+    main(args.indir, outdir, attack_types, args.window_size, args.strided, args.attack_type[0])

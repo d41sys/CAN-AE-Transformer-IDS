@@ -66,31 +66,33 @@ def write_result(fin, label_y, pre_y, classes_num):
 
 class Config:
     def __init__(self):
-        self.model_name = 'Transformer'
+        # self.model_name = 'Transformer_road_mas'
+        self.model_name = 'Transformer_road_fab'
         self.slide_window = 1
         self.slsum_count = 8 #int(math.pow(16, self.slide_window))  # 滑动窗口计数的特征的长度 n-gram?
         self.dnn_out_d = 8 # 经过DNN后的滑动窗口计数特征的维度 Dimensions of sliding window count features after DNN 8
         self.head_dnn_out_d = 32 
         self.d_model = self.dnn_out_d + self.head_dnn_out_d # transformer的输入的特征的维度, dnn_out_d + 包头长度 The dimension of the input feature of the transformer, dnn_out_d + header length
-        self.pad_size = 29
-        self.window_size = 29
+        self.pad_size = 15
+        self.window_size = 15
         self.max_time_position = 10000
         self.nhead = 5 # ori: 5
         self.num_layers = 5
         self.gran = 1e-6
         self.log_e = 2
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.classes_num = 2 #5 for car-hacking 6 for road 
+        self.classes_num = 6 #5 for car-hacking 6 for road 
         self.batch_size = 10
         self.epoch_num = 200
-        self.lr = 0.00001 #0.00001 learning rate 
-        self.train_pro = 0.7  # 训练集比例 Ratio of training set
+        self.lr = 0.0001 #0.00001 learning rate 
+        self.train_pro = 0.8  
 
-        self.root_dir = './road/twomode/TFRecord_w29_s29/1/'
+        self.root_dir = './road/predict_mas_multi/TFRecord_w15_s15/2/'
+        # self.root_dir = './road/predict_mas/TFRecord_w15_s15/4/'
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/mnt/hdd2/transformer-entropy-ids/result/trans8_performance.txt'
+        self.result_file = '/home/tiendat/transformer-entropy-ids/result/trans8_performance.txt'
 
         self.isload_model = False  # 是否加载模型继续训练 Whether to load the model and continue training
         self.start_epoch = 24  # 加载的模型的epoch The epoch of the loaded model
@@ -104,12 +106,29 @@ class DNN(nn.Module):
         self.l3 = nn.Linear(64, d_out)
 
     def forward(self, x):
-        # print('x: ', x.numpy()[0])
+        print('x: ', x.numpy()[0])
         out = F.relu(self.l1(x))
         out = F.relu(self.l2(out))
         out = F.relu(self.l3(out))
-        # print('dnn out: ', out.detach().numpy()[0])
+        print('dnn out: ', out.detach().numpy()[0])
         return out
+
+class ConvAutoencoder1D(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(ConvAutoencoder1D, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv1d(input_dim, 64, kernel_size=3),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size=3)
+        )
+        self.fc = nn.Linear(128*2, output_dim)  # Adjust the dimension based on your input size
+    
+    def forward(self, x):
+        x = self.encoder(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
+
 
 class Time_Positional_Encoding(nn.Module):
     def __init__(self, embed, max_time_position, device):

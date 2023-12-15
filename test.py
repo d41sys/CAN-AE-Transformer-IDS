@@ -1,79 +1,143 @@
-import numpy as np
+print(pow(2,3)-1)
 
-def conditional_entropy(y, x):
-    # Convert input to numpy arrays if they are not already
-    y = np.array(y)
-    x = np.array(x)
-    
-    # Get unique values and their counts for X and Y
-    unique_x, counts_x = np.unique(x, return_counts=True)
-    unique_y, counts_y = np.unique(y, return_counts=True)
-    
-    # Initialize conditional entropy
-    h_y_given_x = 0.0
-    
-    # Calculate conditional entropy
-    for xi, cx in zip(unique_x, counts_x):
-        # Get the subset of Y corresponding to xi in X
-        y_given_xi = y[x == xi]
+# 1
+def solution(x, y):
+    for num in x:
+        if num not in y:
+            return num
+    for num in y:
+        if num not in x:
+            return num
+    return -1
+
+# 2 ion flux relabeling
+def find_parent_node(h, node, max_root):
+    if node >= max_root:
+        return -1
+    # right     
+    if max_root-1 == node:
+        return max_root
+    #left    
+    if max_root - pow(2,h-1) == node:
+        return max_root
         
-        # Get unique values and their counts for the subset of Y given xi in X
-        unique_y_given_xi, counts_y_given_xi = np.unique(y_given_xi, return_counts=True)
+    while h != 2:
+        if node < max_root - pow(2,h-1):
+            return find_parent_node(h-1,node, max_root - pow(2,h-1))
+        else:
+            return find_parent_node(h-1,node, max_root - 1)
+    return -1
         
-        # Calculate conditional probabilities P(Y|X) for xi
-        p_y_given_xi = counts_y_given_xi / cx
-        
-        # Calculate conditional entropy contribution for xi
-        h_y_given_xi = np.sum(-p_y_given_xi * np.log2(p_y_given_xi))
-        
-        # Weighted sum based on P(X=xi)
-        h_y_given_x += h_y_given_xi * (cx / len(x))
+
+def solution(h, q):
+    max_root = pow(2,h)-1
+    # Your code here
+    return [find_parent_node(h, node, max_root) for node in q]
+
+# 3 number station coded messages
+def solution(l, t):
+    # return first beginning and end indexes in l whose values add up to t
+    for start in range(len(l)):
+        total = 0
+        for current, e in enumerate(l[start:]):
+            total += e
+            if total == t:
+                return [start, start + current]
+            if total > t:
+                break
+    return [-1, -1]
+
+from fractions import Fraction
+from fractions import gcd
+
+# Function to calculate determinant
+def determinant(matrix, n):
+    if n == 1:
+        return matrix[0][0]
     
-    return h_y_given_x
+    if n == 2:
+        return matrix[0][0]*matrix[1][1] - matrix[0][1]*matrix[1][0]
 
-# Example usage:
-# Assuming X and Y are two discrete random variables in the form of lists or arrays
-X = [1087, 16, 64, 96, 255, 120]
-Y = [195, 8, 0, 0.00893998146057129, 0.011049985588562010, 0.00969004631042480]
-# Calculate H(Y|X)
-conditional_entropy_value = conditional_entropy(Y, X)
-print("Conditional Entropy H(Y|X) =", conditional_entropy_value)
-
-
-def hamming_distance(str1, str2):
-    # Calculate the Hamming distance between two strings
-    return sum(c1 != c2 for c1, c2 in zip(str1, str2))
-
-def max_hamming_distance(string_array):
-    n = len(string_array)
-    max_distance = 0
-    
-    # Iterate through all possible rotations of the array
+    det = Fraction(0)
     for i in range(n):
-        rotated_array = string_array[i:] + string_array[:i]
-        distance = hamming_distance(string_array, rotated_array)
-        max_distance = max(max_distance, distance)
+        minor = [row[:i] + row[i+1:] for row in matrix[1:]]
+        cofactor = ((-1)**i) * determinant(minor, n-1)
+        det += matrix[0][i] * cofactor
+    return det
+
+# Function to calculate the inverse of a matrix
+def inverse(matrix):
+    n = len(matrix)
+    det = determinant(matrix, n)
     
-    return max_distance
-
-# Example usage:
-string_array_example = ["abcde", "bcdea", "cdeab", "deabc", "eabcd"]
-max_distance = max_hamming_distance(string_array_example)
-print("Maximum Hamming Distance of the string array:", max_distance)
-
-
-def hamming_distance(str1, str2):
-    # Calculate the Hamming distance between two strings
-    return sum(c1 != c2 for c1, c2 in zip(str1, str2))
-
-def print_all_distances(string_array):
-    n = len(string_array)
+    if det == 0:
+        return "Inverse does not exist"
     
+    # Calculate adjoint
+    adjoint = []
     for i in range(n):
-        for j in range(i + 1, n):
-            distance = hamming_distance(string_array[i], string_array[j])
-            print(f"Hamming distance between '{string_array[i]}' and '{string_array[j]}': {distance}")
+        adjoint_row = []
+        for j in range(n):
+            minor = [row[:j] + row[j+1:] for row in (matrix[:i] + matrix[i+1:])]
+            cofactor = ((-1)**(i+j)) * determinant(minor, n-1)
+            adjoint_row.append(cofactor)
+        adjoint.append(adjoint_row)
+    
+    # Transpose the cofactor matrix to get adjoint
+    adjoint = list(map(list, zip(*adjoint)))
+    
+    # Calculate inverse using the formula: 1/det(A) * adjoint(A)
+    inv = [[adjoint[i][j] * Fraction(1, det) for j in range(n)] for i in range(n)]
+    
+    return inv
 
-# Example usage:
-string_array_example = ["abcde", "bcdea", "cdeab", "deabc", "eabcd"]
-print_all_distances(string_array_example)
+# Function to find LCM of two numbers
+def lcm(a):
+    # least common multiple for array
+    for i, x in enumerate(a):
+        lcm = x if i == 0 else lcm * x // gcd(lcm, x)
+    return lcm
+
+def solution(m):
+    # Your code here
+    terminal = [not any(row) for row in m]
+
+    if terminal.count(True) == 1:
+        return [1, 1]
+    count_terminal = 0
+    idx_terminal = []
+    idx_not_terminal = []
+    
+    for row in m:
+      sum_row = sum(row)
+      if sum_row > 0:
+        for i in range(len(row)):
+          if row[i] > 0:
+            row[i] = Fraction(row[i], sum_row)
+    
+    for indx, row in enumerate(m):
+        if not any(row):
+            idx_terminal.append(indx)
+            count_terminal += 1
+    
+    for idx in range(len(m)):
+        if idx not in idx_terminal:
+            idx_not_terminal.append(idx)
+            
+    I = [[1 if i == j else 0 for j in range((len(idx_not_terminal)))] for i in range(len(idx_not_terminal))]
+    R = [[m[i][j] for j in idx_terminal] for i in idx_not_terminal]
+    Q = [[m[i][j] for j in idx_not_terminal] for i in idx_not_terminal]
+    
+    sub_matrix = [[I[i][j] - Q[i][j] for j in range(len(Q[0]))] for i in range(len(I))]
+    F = inverse(sub_matrix)
+    
+    FR_res = [[sum(a * b for a, b in zip(F_row, R_col)) for R_col in zip(*R)] for F_row in F]
+    
+    # Extract numerators and common denominator
+    lcm_denominator = lcm([x.denominator for x in FR_res[0]])
+    
+    numerators = [int(frac * lcm_denominator) for frac in FR_res[0]]
+    numerators.append(lcm_denominator)
+    
+    return numerators
+    

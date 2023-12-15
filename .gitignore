@@ -7,5 +7,6 @@ data-test
 result
 model
 trainer_result.txt
-
+rule_static.json
 *.txt
+*.json
