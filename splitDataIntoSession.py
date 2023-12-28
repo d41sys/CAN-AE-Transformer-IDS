@@ -23,7 +23,7 @@ attributes = ['Timestamp', 'canID', 'DLC',
                            'Data3', 'Data4', 'Data5', 
                            'Data6', 'Data7', 'Flag']
 
-road_attributes = ['Timesmooth', 'canID', 'Data', 'Timestamp', 'TimeDiffs', 'Flag']
+road_attributes = ['Timestamp', 'canID', 'Data', 'TimeDiffs', 'Flag']
 
 def hex_to_int(hex_value):
     return int(hex_value, base=16)
@@ -58,16 +58,14 @@ def split_into_list(string, type):
 def serialize_example(x, y): 
     """converts x, y to tf.train.Example and serialize"""
     #Need to pay attention to whether it needs to be converted to numpy() form
-    timestamp, timediff, canid, payload = x
+    timestamp, canid, payload = x
     timestamp = tf.train.FloatList(value = np.array(timestamp).flatten())
-    timediff = tf.train.FloatList(value = np.array(timediff).flatten())
     canid = tf.train.Int64List(value = np.array(canid).flatten())
     payload = tf.train.Int64List(value = np.array(payload).flatten())
     label = tf.train.Int64List(value = np.array([y]))
     features = tf.train.Features(
         feature = {
             "timestamp": tf.train.Feature(float_list = timestamp),
-            "timediff": tf.train.Feature(float_list = timediff),
             "header": tf.train.Feature(int64_list = canid),
             "payload": tf.train.Feature(int64_list = payload),
             "label" : tf.train.Feature(int64_list = label)
@@ -79,7 +77,7 @@ def serialize_example(x, y):
 def write_tfrecord(data, filename):
     tfrecord_writer = tf.io.TFRecordWriter(filename)
     for _, row in tqdm(data.iterrows()):
-        X = (row['timestamp'], row['timediff'], row['header'], row['payload'])
+        X = (row['timestamp'], row['header'], row['payload'])
         Y = row['label']
         tfrecord_writer.write(serialize_example(X, Y))
     tfrecord_writer.close() 
@@ -91,7 +89,7 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
     
     print("Window size = {}, strided = {}".format(window_size, strided_size))
     
-    if type_data == 'car-hacking':
+    if type_data == 'chd':
         df = pd.read_csv(file_name, header=None, names=attributes)
         print("Reading {}: done".format(file_name))
         df = df.sort_values('Timestamp', ascending=True)
@@ -113,21 +111,16 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
         df = pd.read_csv(file_name)
         df.columns = road_attributes
         print("Reading {}: done".format(file_name))
-        df = df.sort_values('Timesmooth', ascending=True)
+        df = df.sort_values('Timestamp', ascending=True)
         df['Data'] = df['Data'].apply(lambda x: split_into_list(x, 'payload'))
-        # # This dataframe is used for anomaly threshold
-        # df_anomaly = copy(df[df['Flag'] == False])
         print("Copy anomaly: DONE")
         df['canID'] = df['canID'].apply(lambda x: split_into_list(x, 'cid'))
-        # print(df['TimeDiffs'])
         print("ROAD pre-processing: Done") 
-    # print("BYTEs: ", df['Flag'][0].nbytes)
     
     
     as_strided = np.lib.stride_tricks.as_strided
     output_shape = ((len(df) - window_size) // strided_size + 1, window_size)
     timestamp = as_strided(df.Timestamp, output_shape, (8*strided_size, 8))
-    # timediff = as_strided(df.TimeDiffs, output_shape, (8*strided_size, 8))
     canid = as_strided(df.canID, output_shape, (8*strided_size, 8))
     data = as_strided(df.Data, output_shape, (8*strided_size, 8)) #Stride is counted by bytes
     label = as_strided(df.Flag, output_shape, (1*strided_size, 1))
@@ -147,8 +140,6 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
     
     # print('Label before use: ', df['label'])
     df['label'] = df['label'].apply(lambda x: attack_id if any(x) else 0)
-    # df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
-    # print('Label after use: ', df['label'])
     print("Aggregating data: Done")
     print('#Normal: ', df[df['label'] == 0].shape[0])
     print('#Attack: ', df[df['label'] != 0].shape[0])
@@ -156,7 +147,7 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
 
 def main(indir, outdir, attacks, window_size, strided, attack_types):
     print(outdir)
-    print("=========================================================================================================")
+    print("========================================================================================")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     data_info = {} 
@@ -181,10 +172,10 @@ def main(indir, outdir, attacks, window_size, strided, attack_types):
             print('Attack: {} ==============='.format(attack_name))
             
             if int(attack_ver) == 1:
-                if attack_types == 'road':
+                if attack_types == 'road_fab':
                     finput = '{}/{}_dataset.csv'.format(indir, attack_name)
                     df = split_data(finput, attack_id + 1, window_size, strided, type_data)
-                elif attack_types == 'road_masquerade':
+                elif attack_types == 'road_mas':
                     finput = '{}/{}_masquerade_dataset.csv'.format(indir, attack_name)
                     df = split_data(finput, attack_id + 1, window_size, strided, type_data)
                 else:
@@ -208,10 +199,10 @@ def main(indir, outdir, attacks, window_size, strided, attack_types):
                 data_info[foutput_normal] = df_normal.shape[0]
             else:
                 for index in range(int(attack_ver)):
-                    if attack_types == 'road':
+                    if attack_types == 'road_fab':
                         finput = '{}/{}_{}_dataset.csv'.format(indir, attack_name, index+1)
                         df = split_data(finput, attack_id + 1, window_size, strided, type_data)
-                    elif attack_types == 'road_masquerade':
+                    elif attack_types == 'road_mas':
                         finput = '{}/{}_{}_masquerade_dataset.csv'.format(indir, attack_name, index+1)
                         df = split_data(finput, attack_id + 1, window_size, strided, type_data)
                     else:
@@ -235,7 +226,7 @@ def main(indir, outdir, attacks, window_size, strided, attack_types):
                     data_info[foutput_attack] = df_attack.shape[0]
                     data_info[foutput_normal] = df_normal.shape[0]
     elif len(attacks) == 4: 
-        type_data = 'car-hacking'
+        type_data = 'chd'
         for attack_id, attack in enumerate(attacks):
             print('Attack: {} ==============='.format(attack))
             finput = '{}/{}_dataset.csv'.format(indir, attack)
@@ -252,28 +243,23 @@ def main(indir, outdir, attacks, window_size, strided, attack_types):
             data_info[foutput_normal] = df_normal.shape[0]
     print("Write record DONE!!!")
     json.dump(data_info, open('{}/datainfo.txt'.format(outdir), 'w'))
-    # can_dict = calc_anomaly_threshhold(df_anomaly)
-    # json.dump(can_dict, open('{}/candict.txt'.format(outdir), 'w'))
     print("DONE!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--indir', type=str, default="./data/car-hacking")
-    parser.add_argument('--outdir', type=str, default="./data/Processed/TFRecord")
-    parser.add_argument('--window_size', type=int, default=None)
-    parser.add_argument('--strided', type=int, default=None)
+    parser.add_argument('--outdir', type=str, default="./data/CHD/TFRecord")
+    parser.add_argument('--window_size', type=int, default=15)
+    parser.add_argument('--strided', type=int, default=15)
     parser.add_argument('--attack_type', type=str, default="all", nargs='+')
     args = parser.parse_args()
     
-    if args.attack_type == 'car-hacking':
-        #python3 splitDataIntoSession.py --window_size=29 --strided=29 >> splitdata.txt
+    if args.attack_type[0] == 'chd':
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
         print("Car hacking")
-    elif args.attack_type[0] == 'road':
-        #python3 splitDataIntoSession.py --window_size=29 --strided=29 --attack_type=road --indir=./road/processed --outdir=./road/preprocessed/TFRecord > split_road.txt
+    elif args.attack_type[0] == 'road_fab':
         attack_types = ['max_engine_coolant_temp_attack,1', 'fuzzing_attack,3', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']
-    elif args.attack_type[0] == 'road_masquerade':
-        #python3 splitDataIntoSession.py --window_size=29 --strided=29 --attack_type=road --indir=./road/processed --outdir=./road/preprocessed/TFRecord > split_road.txt
+    elif args.attack_type[0] == 'road_mas':
         attack_types = ['max_engine_coolant_temp_attack,1', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']
     elif args.attack_type[0] == 'all':
         attack_types = ['max_engine_coolant_temp_attack,1', 'fuzzing_attack,3', 'max_speedometer_attack,3', 'reverse_light_on_attack,3', 'reverse_light_off_attack,3', 'correlated_signal_attack,3']

@@ -17,9 +17,8 @@ class TFwriter:
     def serialize_example(self, x, y): 
         """converts x, y to tf.train.Example and serialize"""
         #Need to pay attention to whether it needs to be converted to numpy() form
-        timestamp, timediff, canid, payload = x
+        timestamp, canid, payload = x
         timestamp = tf.train.FloatList(value = np.array(timestamp).flatten())
-        timediff = tf.train.FloatList(value = np.array(timediff).flatten())
         # print("TIMESTAMP: ", timestamp.value)
         canid = tf.train.Int64List(value = np.array(canid).flatten())
         # print("CANID: ", canid.value)
@@ -30,7 +29,6 @@ class TFwriter:
         features = tf.train.Features(
             feature = {
                 "timestamp": tf.train.Feature(float_list = timestamp),
-                "timediff": tf.train.Feature(float_list = timediff),
                 "header": tf.train.Feature(int64_list = canid),
                 "payload": tf.train.Feature(int64_list = payload),
                 "label" : tf.train.Feature(int64_list = label)
@@ -50,7 +48,6 @@ def read_tfrecord(example, window_size):
     # window_size = 20
     feature_description = {
     'timestamp': tf.io.FixedLenFeature([window_size], tf.float32),
-    'timediff': tf.io.FixedLenFeature([window_size], tf.float32),
     'header': tf.io.FixedLenFeature([window_size*4], tf.int64),
     'payload': tf.io.FixedLenFeature([window_size*8], tf.int64),
     'label': tf.io.FixedLenFeature([1], tf.int64)
@@ -65,7 +62,7 @@ def write_tfrecord(dataset, tfwriter):
         # print("BATCH HEADER: ", batch_data['header'][0])
         # print("BATCH PAYLOAD: ", batch_data['payload'][0])
         # print("BATCH LABEL: ", batch_data['label'][0])
-        features = zip(batch_data['timestamp'], batch_data['timediff'], batch_data['header'], batch_data['payload'])
+        features = zip(batch_data['timestamp'], batch_data['header'], batch_data['payload'])
         for x, y in zip(features, batch_data['label']):
             tfwriter.write(x, y)
             
