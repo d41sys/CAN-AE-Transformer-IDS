@@ -99,7 +99,7 @@ class Config:
         self.window_size =  args.window_size # 15
         self.max_time_position = 10000
         self.num_layers = 6
-        self.gran = 1e-8 # ori: 1e-6
+        self.gran = 1e-7 # ori: 1e-6
         self.log_e = 2
         
         if args.type == 'chd':
@@ -121,7 +121,7 @@ class Config:
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/home/tiendat/transformer-entropy-ids/result/trans8_performance.txt'
+        self.result_file = '/home/tiendat/transformer-entropy-ids/result/'+'IDS-Transformer_' + args.type + '_performance.txt'
 
         self.isload_model = False  
         self.start_epoch = 24  # The epoch of the loaded model
@@ -296,7 +296,7 @@ def prepare_fin(config):
             + '\t num_layers: ' + str(config.num_layers) + '\n')
     fin.write(
         'batch_size: ' + str(config.batch_size) + '\t learning rate: ' + str(
-            config.lr) + '\n\n')
+            config.lr) + '\t smooth factor: ' + str(config.gran) + '\n\n')
     fin.close()
     
 if __name__ == '__main__':
