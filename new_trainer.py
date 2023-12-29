@@ -99,7 +99,7 @@ class Config:
         self.window_size =  args.window_size # 15
         self.max_time_position = 10000
         self.num_layers = 6
-        self.gran = 1e-7 # ori: 1e-6
+        self.gran = 1e-6 # ori: 1e-6
         self.log_e = 2
         
         if args.type == 'chd':
@@ -121,7 +121,7 @@ class Config:
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/home/tiendat/transformer-entropy-ids/result/'+'IDS-Transformer_' + args.type + '_performance.txt'
+        self.result_file = '/home/tiendat/transformer-entropy-ids/result/'+'IDS-Transformer_' + args.type + args.ver + '_performance.txt'
 
         self.isload_model = False  
         self.start_epoch = 24  # The epoch of the loaded model
@@ -309,6 +309,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--mode', type=str, default="ae")
     parser.add_argument('--tse', type=bool, default=False)
+    parser.add_argument('--ver', type=str, default='1')
     args = parser.parse_args()
     
     config = Config(args)
