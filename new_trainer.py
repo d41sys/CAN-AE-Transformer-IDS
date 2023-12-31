@@ -70,19 +70,6 @@ class Config:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         self.payload_size = 8 
-            
-        if args.mode == "ae":
-            self.mode = args.mode
-            self.dout_payload = 7 
-            self.dout_header = 3 
-            self.d_model = self.dout_payload + self.dout_header # dimension input of transformer encoder
-            self.nhead = 10 # ori: 5
-        elif args.mode == "dnn":
-            self.mode = args.mode
-            self.dout_payload = 32
-            self.dout_header = 8 
-            self.d_model = self.dout_payload + self.dout_header 
-            self.nhead = 5 # ori: 5
         elif args.mode == "cb":
             self.mode = args.mode
             self.dout_mess = 10
@@ -99,7 +86,7 @@ class Config:
         self.window_size =  args.window_size # 15
         self.max_time_position = 10000
         self.num_layers = 6
-        self.gran = 1e-6 # ori: 1e-6
+        self.gran = 1e-7 # ori: 1e-6
         self.log_e = 2
         
         if args.type == 'chd':
@@ -121,19 +108,12 @@ class Config:
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/home/tiendat/transformer-entropy-ids/result/'+'IDS-Transformer_' + args.type + args.ver + '_performance.txt'
+        self.result_file = '/home/tiendat/transformer-entropy-ids/result/'+'pIDS_' + args.type + args.ver + '_' + args.mode + '.txt'
 
         self.isload_model = False  
         self.start_epoch = 24  # The epoch of the loaded model
         self.model_path = 'model/' + self.model_name + '/' + self.model_name + '_model_' + str(self.start_epoch) + '.pth' 
-
-class DNN(nn.Module):
-    def __init__(self, d_in, d_out):  # config.payload_size, config.dout_payload
-        super(DNN, self).__init__()
-        self.l1 = nn.Linear(d_in, 128)
-        self.l2 = nn.Linear(128, 64)
-        self.l3 = nn.Linear(64, d_out)
-
+        
     def forward(self, x):
         #print('x: ', x.cpu().numpy()[0])
         out = F.relu(self.l1(x))
@@ -210,11 +190,6 @@ class TransformerPredictor(nn.Module):
             self.header_ae = Autoencoder1D(4, config.dout_header).to(config.device)
             self.dout_payload = config.dout_payload
             self.dout_header = config.dout_header
-        elif config.mode == "dnn":
-            self.dnn = DNN(config.payload_size, config.dout_payload).to(config.device)
-            self.head_dnn = DNN(4, config.dout_header).to(config.device)
-            self.dout_payload = config.dout_payload
-            self.dout_header = config.dout_header
         elif config.mode == "cb":
             self.ae = Autoencoder1D(12, config.dout_mess).to(config.device)
             self.dout_mess = config.dout_mess
@@ -235,36 +210,6 @@ class TransformerPredictor(nn.Module):
                 TSE: {self.tse}")
         
     def forward(self, header, sl_sum, mask, time_position):
-        if self.mode == "ae":
-            ae_out = torch.empty((sl_sum.shape[0], self.dout_payload, 0)).to(config.device)
-            header_ae_out = torch.empty((header.shape[0], self.dout_header, 0)).to(config.device)
-            
-            for i in range(self.pad_size):
-                tmp = self.payload_ae(sl_sum[:, i, :]).unsqueeze(2)
-                ae_out = torch.concat((ae_out, tmp), dim=2)
-            ae_out = ae_out.permute(0, 2, 1)
-            
-            for i in range(self.pad_size):
-                tmp = self.header_ae(header[:, i, :]).unsqueeze(2)
-                header_ae_out = torch.concat((header_ae_out, tmp), dim=2)
-            header_ae_out = header_ae_out.permute(0, 2, 1)
-            
-            x = torch.concat((header_ae_out, ae_out), dim=2).permute(1, 0, 2)
-        elif self.mode == "dnn":
-            dnn_out = torch.empty((sl_sum.shape[0], self.dout_payload, 0)).to(config.device)
-            head_dnn_out = torch.empty((header.shape[0], self.dout_header, 0)).to(config.device)
-            
-            for i in range(self.pad_size):
-                tmp = self.dnn(sl_sum[:, i, :]).unsqueeze(2)
-                dnn_out = torch.concat((dnn_out, tmp), dim=2)
-            dnn_out = dnn_out.permute(0, 2, 1)
-            
-            for i in range(self.pad_size):
-                tmp = self.head_dnn(header[:, i, :]).unsqueeze(2)
-                head_dnn_out = torch.concat((head_dnn_out, tmp), dim=2)
-            head_dnn_out = head_dnn_out.permute(0, 2, 1)  
-            x = torch.concat((head_dnn_out, dnn_out), dim=2).permute(1, 0, 2)
-        
         elif self.mode == "cb":
             x = torch.concat((header, sl_sum), dim=-1)
             ae_out = torch.empty((x.shape[0], 10, 0)).to(config.device)
@@ -290,6 +235,7 @@ def prepare_fin(config):
     fin = open(config.result_file, 'a')
     fin.write('-------------------------------------\n')
     fin.write(config.model_name + '\n')
+    fin.write(config.mode + '\n')
     fin.write('Begin time: ' + str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())) + '\n')
     fin.write('Data root dir: ' + config.root_dir + '\n')
     fin.write('d_model: ' + str(config.d_model) + '\t pad_size: ' + str(config.pad_size) + '\t nhead: ' + str(config.nhead)
