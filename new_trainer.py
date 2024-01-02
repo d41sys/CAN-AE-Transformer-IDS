@@ -70,7 +70,7 @@ class Config:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         self.payload_size = 8 
-        elif args.mode == "cb":
+        if args.mode == "cb":
             self.mode = args.mode
             self.dout_mess = 10
             self.d_model = self.dout_mess
@@ -210,7 +210,7 @@ class TransformerPredictor(nn.Module):
                 TSE: {self.tse}")
         
     def forward(self, header, sl_sum, mask, time_position):
-        elif self.mode == "cb":
+        if self.mode == "cb":
             x = torch.concat((header, sl_sum), dim=-1)
             ae_out = torch.empty((x.shape[0], 10, 0)).to(config.device)
             for i in range(self.pad_size):
@@ -291,7 +291,7 @@ if __name__ == '__main__':
         start_epoch = -1
     loss_func = nn.CrossEntropyLoss().to(config.device)
     opt = optim.Adam(model.parameters(), lr=config.lr)
-    lr_scheduler = CosineWarmupScheduler(opt, warmup=50, max_iters=config.epoch_num*len(train_loader))
+    lr_scheduler = CosineWarmupScheduler(opt, warmup=100, max_iters=config.epoch_num*len(train_loader))
 
 
     for epoch in range(start_epoch + 1, config.epoch_num):
