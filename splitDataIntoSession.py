@@ -126,7 +126,6 @@ def split_data(file_name, attack_id, window_size, strided_size, type_data):
     label = as_strided(df.Flag, output_shape, (1*strided_size, 1))
     
     # print("timestamp output", timestamp[0], " and length: ", len(timestamp[0]))
-    # print("timediff output", timediff[0], " and length: ", len(timediff[0]))
     # print("canid output", canid[0], " and length: ", len(canid[0]))
     # print("data output", data[0], " and length: ", len(data[0]))
     # print("label output", label[0], " and length: ", len(label[0]))

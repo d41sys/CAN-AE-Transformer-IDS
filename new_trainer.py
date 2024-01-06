@@ -113,15 +113,7 @@ class Config:
         self.isload_model = False  
         self.start_epoch = 24  # The epoch of the loaded model
         self.model_path = 'model/' + self.model_name + '/' + self.model_name + '_model_' + str(self.start_epoch) + '.pth' 
-        
-    def forward(self, x):
-        #print('x: ', x.cpu().numpy()[0])
-        out = F.relu(self.l1(x))
-        out = F.relu(self.l2(out))
-        out = F.relu(self.l3(out))
-        #print('dnn out: ', out.cpu().detach().numpy()[0])
-        return out
-    
+
 class Autoencoder1D(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(Autoencoder1D, self).__init__()
