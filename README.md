@@ -1,6 +1,8 @@
 # CAN-AE-Transformer-IDS
 This is source code for paper "Multi-Classification In-Vehicle Intrusion Detection System using Packet- and Sequence-Level Characteristics from Time-Embedded Transformer with Autoencoder"
+
 Journal: Knowledge-Based Systems
+
 Link: https://doi.org/10.1016/j.knosys.2024.112091
 
 ## Data Preprocessing
