@@ -61,3 +61,17 @@ CUDA_VISIBLE_DEVICES=2 python3 new_trainer.py --indir=./road/fab_multi/TFRecord_
 --tse, type=bool           | Using tse 
 
 --ver, type=str            | Version value
+
+## Citation
+
+If you use this code for your research, please cite our paper.
+
+@article{LE2024112091,
+title = {Multi-classification in-vehicle intrusion detection system using packet- and sequence-level characteristics from time-embedded transformer with autoencoder},
+journal = {Knowledge-Based Systems},
+volume = {299},
+pages = {112091},
+year = {2024},
+issn = {0950-7051},
+doi = {https://doi.org/10.1016/j.knosys.2024.112091},
+url = {https://www.sciencedirect.com/science/article/pii/S0950705124007251}}
