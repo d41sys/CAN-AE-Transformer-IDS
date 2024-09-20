@@ -287,9 +287,10 @@ if __name__ == '__main__':
 
 
     for epoch in range(start_epoch + 1, config.epoch_num):
-        fin = open(config.result_file, 'a')
+        model.train
+        with open(config.result_file, 'a') as fin:
+            fin.write('-- epoch ' + str(epoch) + '\n')
         print('--- epoch ', epoch)
-        fin.write('-- epoch ' + str(epoch) + '\n')
         for i, sample_batch in enumerate(train_loader):
             batch_header = sample_batch['header'].type(torch.FloatTensor).to(config.device)
             batch_payload = sample_batch['payload'].type(torch.FloatTensor).to(config.device)
@@ -308,6 +309,7 @@ if __name__ == '__main__':
         torch.save(model, (config.model_save_path + config.model_name + '_model_{}.pth').format(epoch))
 
         # test
+        model.eval()
         label_y = []
         pre_y = []
         with torch.no_grad():
@@ -328,9 +330,8 @@ if __name__ == '__main__':
             draw_confusion(label_y, pre_y, '')
         fin.close()
 
-    fin = open(config.result_file, 'a')
-    fin.write('\n\n\n')
-    fin.close()
+    with open(config.result_file, 'a') as fin:
+        fin.write('\n\n\n')
     
 
 
